@@ -123,24 +123,100 @@ end
 ----------------------------------------
 --单位管理
 
+---重写lib内的方法，直接标记object的状态为del
+---@param o object
+function RawDel(o)
+	if IsValid(o) then
+		o.status = "del"
+		if o._servants then
+			_del_servants(o)
+		end
+	end
+end
+
+---重写lib内的方法，直接标记object的状态为kill
+---@param o object
+function RawKill(o)
+	if IsValid(o) then
+		o.status = "kill"
+		if o._servants then
+			_kill_servants(o)
+		end
+	end
+end
+
+---重写底层的方法，杀死一个对象和它的随从
+---@param o object
+---@vararg any
+function Kill(o, ... )
+	if IsValid(o) then
+		if o._servants then
+			_kill_servants(o)
+		end
+		lstg.Kill(o, ... )
+	end
+end
+
+---重写底层的方法，删除一个对象和它的随从
+---@param o object
+---@vararg any
+function Del(o, ... )
+	if IsValid(o) then
+		if o._servants then
+			_del_servants(o)
+		end
+		lstg.Del(o, ... )
+	end
+end
+
 function _kill(unit,trigger)
 	if IsValid(unit[1]) then
 		for i=1,#unit do
-			if trigger then Kill(unit[i]) else RawKill(unit[i]) end
+			if trigger then
+				Kill(unit[i])
+			else
+				RawKill(unit[i])
+			end
 		end
 		return
 	end
-	if trigger then Kill(unit) else RawKill(unit) end
+	if trigger then
+		Kill(unit)
+	else
+		RawKill(unit)
+	end
 end
 
 function _del(unit,trigger)
 	if IsValid(unit[1]) then
 		for i=1,#unit do
-			if trigger then Del(unit[i]) else RawDel(unit[i]) end
+			if trigger then
+				Del(unit[i])
+			else
+				RawDel(unit[i])
+			end
 		end
 		return
 	end
-	if trigger then Del(unit) else RawDel(unit) end
+	if trigger then
+		Del(unit)
+	else
+		RawDel(unit)
+	end
+end
+
+---设置速度
+---@param obj object
+---@param v number
+---@param angle number
+---@param rot number
+---@param aim boolean
+function SetV2(obj, v, angle, rot, aim)
+	if aim then
+		SetV(obj, v, angle + Angle(obj, _Player(obj)), rot)
+	else
+		SetV(obj, v, angle, rot)
+	end
 end
 
 function RawSetA(self, accel, angle, navi, maxv)

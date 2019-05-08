@@ -12,7 +12,7 @@ lstg.debug={}
 ----------------------------------------
 ---几大函数执行时间计时
 
----高精度计时器接口
+---高精度计时器
 lstg.debug.usTimer=lstg.StopWatch()
 
 local startT={}

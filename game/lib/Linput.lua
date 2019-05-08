@@ -17,20 +17,25 @@ function GetInput()
 end
 
 ---是否按下
+---@param key string
+---@return boolean
 function KeyIsDown(key)
 	return KeyState[key]
 end
 
+KeyPress = KeyIsDown
+
 ---是否在当前帧按下
+---@param key string
+---@return boolean
 function KeyIsPressed(key)--于javastage中重载
 	return KeyState[key] and (not KeyStatePre[key])
 end
 
----兼容
-KeyPress = KeyIsDown
 KeyTrigger = KeyIsPressed
 
 ---将按键二进制码转换为字面值，用于设置界面
+---@return table @{code:number=name:string, ... }
 function KeyCodeToName()
 	local key2name={}
 	--按键code（参见launch和微软文档）作为索引，名称为值
@@ -43,3 +48,5 @@ function KeyCodeToName()
 	end
 	return key2name
 end
+
+-- TODO:加入鼠标、手柄的输入获取

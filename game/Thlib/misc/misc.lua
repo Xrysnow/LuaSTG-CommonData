@@ -259,12 +259,12 @@ tasker=Class(object)
 
 function tasker:init(f,group)
 	self.group=group or GROUP_GHOST
-	task.New(self,f)
+	self._task = task.New(self,f)
 end
 
 function tasker:frame()
 	task.Do(self)
-	if coroutine.status(self.task[1])=='dead' then
+	if coroutine.status(self._task)=='dead' then
 		Del(self)
 	end
 end

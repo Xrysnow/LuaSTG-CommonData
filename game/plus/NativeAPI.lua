@@ -1,9 +1,15 @@
+---=====================================
+---luastg plus 强化脚本库
+---Windows实现
+---=====================================
+
 local ffi = require "ffi"
 
--- Windows标准库
+---Windows标准库
 local kernel32 = ffi.load("kernel32");
 
--------------------------------------------------- Windows基础数据类型
+----------------------------------------
+---Windows基础数据类型
 
 ffi.cdef [[
     // 基础类型
@@ -146,7 +152,8 @@ local INVALID_HANDLE_VALUE = ffi.cast("void*", -1)
 local TRUE = ffi.cast("BOOL", 1)
 local FALSE = ffi.cast("BOOL", 0)
 
--------------------------------------------------- 错误处理
+----------------------------------------
+---错误处理
 
 local UTF8ToUTF16LE
 local UTF16LEToUTF8
@@ -169,23 +176,29 @@ ffi.cdef [[
 local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
 
+---获取Windows上一个错误码
+---@return number
 local function GetLastError()
-    return kernel32.GetLastError()
+	return kernel32.GetLastError()
 end
 
+---格式错误码为字符串
+---@param code number @errcode
+---@return string
 local function FormatLastError(code)
-    code = code or GetLastError()
-
-    local buffer = ffi.new("short[512]")
-    local flags = FORMAT_MESSAGE_FROM_SYSTEM + FORMAT_MESSAGE_IGNORE_INSERTS
-    local code_c = ffi.cast("int", code)
-
-    kernel32.FormatMessageW(flags, nil, code_c, 0, buffer, ffi.sizeof(buffer), nil)
-
-    return string.format("%s (LastError=%d)", string.sub(UTF16LEToUTF8(buffer), 1, -3), code)
+	code = code or GetLastError()
+	
+	local buffer = ffi.new("short[512]")
+	local flags = FORMAT_MESSAGE_FROM_SYSTEM + FORMAT_MESSAGE_IGNORE_INSERTS
+	local code_c = ffi.cast("int", code)
+	
+	kernel32.FormatMessageW(flags, nil, code_c, 0, buffer, ffi.sizeof(buffer), nil)
+	
+	return string.format("%s (LastError=%d)", string.sub(UTF16LEToUTF8(buffer), 1, -3), code)
 end
 
--------------------------------------------------- 编码转换
+----------------------------------------
+---编码转换
 
 ffi.cdef [[
     int MultiByteToWideChar(
@@ -214,86 +227,88 @@ local CP_OEMCP = 1       -- default to OEM code page
 local CP_MACCP = 2       -- default to MAC code page
 local CP_THREAD_ACP = 3  -- current thread's ANSI code page
 local CP_SYMBOL = 42     -- SYMBOL translations
-local CP_UTF8 = 65001
+local CP_UTF8 = 65001    -- no BOM UTF8
 
 UTF8ToUTF16LE = function(src, bytes)
-    bytes = bytes or #src
-    if bytes == 0 then
-        return nil
-    end
-
-    -- 需要的字符数
-    local needed = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, nil, 0)
-    if needed <= 0 then
-        error("MultiByteToWideChar: "..FormatLastError())
-    end
-
-    local buffer = ffi.new("uint16_t[?]", needed + 1)
-    local count = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, buffer, needed)
-    buffer[count] = 0
-
-    return buffer
+	bytes = bytes or #src
+	if bytes == 0 then
+		return nil
+	end
+	
+	-- 需要的字符数
+	local needed = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, nil, 0)
+	if needed <= 0 then
+		error("MultiByteToWideChar: " .. FormatLastError())
+	end
+	
+	local buffer = ffi.new("uint16_t[?]", needed + 1)
+	local count = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, buffer, needed)
+	buffer[count] = 0
+	
+	return buffer
 end
 
 UTF16LEToUTF8 = function(src, bytes)
-    bytes = bytes or ffi.sizeof(src)
-    if bytes == 0 then
-        return nil
-    end
-
-    -- 需要的字符数
-    local needed = kernel32.WideCharToMultiByte(CP_UTF8, 0, src, -1, nil, 0, nil, nil)
-    if needed <= 0 then
-        error("WideCharToMultiByte: "..FormatLastError())
-    end
-
-    local buffer = ffi.new("uint8_t[?]", needed + 1)
-    local count = kernel32.WideCharToMultiByte(CP_UTF8, 0, src, -1, buffer, needed, nil, nil)
-    buffer[count] = 0
-
-    return ffi.string(buffer, count - 1)
+	bytes = bytes or ffi.sizeof(src)
+	if bytes == 0 then
+		return nil
+	end
+	
+	-- 需要的字符数
+	local needed = kernel32.WideCharToMultiByte(CP_UTF8, 0, src, -1, nil, 0, nil, nil)
+	if needed <= 0 then
+		error("WideCharToMultiByte: " .. FormatLastError())
+	end
+	
+	local buffer = ffi.new("uint8_t[?]", needed + 1)
+	local count = kernel32.WideCharToMultiByte(CP_UTF8, 0, src, -1, buffer, needed, nil, nil)
+	buffer[count] = 0
+	
+	return ffi.string(buffer, count - 1)
 end
 
-UTF8ToANSI = function(src, bytes)--by ETC ，用于使用windows坑爹ANSI编码的函数
-    --获取源字符串长度
-    bytes = bytes or #src
-    if bytes == 0 then
-        return nil
-    end
-    
-    ----先转换成unicode
-    
-    --计算需要的字符数
-    local needed = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, nil, 0)
-    if needed <= 0 then
-        error("MultiByteToWideChar: "..FormatLastError())
-    end
-    
-    local buffer = ffi.new("uint16_t[?]", needed + 1)
-    local count = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, buffer, needed)
-    buffer[count] = 0
-    
-    ----再转成ANSI
-    
-    --计算需要的字符数
-    local needed2 = kernel32.WideCharToMultiByte(CP_ACP, 0, buffer, needed + 1, nil, 0, nil, nil)
-    if needed2 <= 0 then
-        error("MultiByteToWideChar: "..FormatLastError())
-    end
-    
-    local buffer2 = ffi.new("char[?]", needed2 + 1)
-    local count2 = kernel32.WideCharToMultiByte(CP_ACP, 0, buffer, needed + 1, buffer2, needed2, nil, nil)
-    buffer2[count2] = 0
-    
-    --return buffer2
-    return ffi.string(buffer2, count2 - 1)
+UTF8ToANSI = function(src, bytes)
+	--by ETC ，用于使用windows坑爹ANSI编码的函数（说的就是你，io.open）
+	--获取源字符串长度
+	bytes = bytes or #src
+	if bytes == 0 then
+		return nil
+	end
+	
+	----先转换成unicode
+	
+	--计算需要的字符数
+	local needed = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, nil, 0)
+	if needed <= 0 then
+		error("MultiByteToWideChar: " .. FormatLastError())
+	end
+	
+	local buffer = ffi.new("uint16_t[?]", needed + 1)
+	local count = kernel32.MultiByteToWideChar(CP_UTF8, 0, src, bytes, buffer, needed)
+	buffer[count] = 0
+	
+	----再转成ANSI
+	
+	--计算需要的字符数
+	local needed2 = kernel32.WideCharToMultiByte(CP_ACP, 0, buffer, needed + 1, nil, 0, nil, nil)
+	if needed2 <= 0 then
+		error("MultiByteToWideChar: " .. FormatLastError())
+	end
+	
+	local buffer2 = ffi.new("char[?]", needed2 + 1)
+	local count2 = kernel32.WideCharToMultiByte(CP_ACP, 0, buffer, needed + 1, buffer2, needed2, nil, nil)
+	buffer2[count2] = 0
+	
+	--return buffer2
+	return ffi.string(buffer2, count2 - 1)
 end
 
-__UTF8ToUTF16LE=UTF8ToUTF16LE
-__UTF16LEToUTF8=UTF16LEToUTF8
-__UTF8ToANSI=UTF8ToANSI
+__UTF8ToUTF16LE = UTF8ToUTF16LE
+__UTF16LEToUTF8 = UTF16LEToUTF8
+__UTF8ToANSI = UTF8ToANSI
 
--------------------------------------------------- 文件系统
+----------------------------------------
+---文件系统
 
 ffi.cdef [[
     typedef struct {
@@ -329,93 +344,94 @@ ffi.cdef [[
 local FILE_ATTRIBUTE_DIRECTORY = 0x00000010
 
 local function UnixTimeToFileTime(timestamp)
-    return timestamp * 10000000 + 116444736000000000
+	return timestamp * 10000000 + 116444736000000000
 end
 
 local function FileTimeToUnixTime(timestamp)
-    local t = timestamp - 116444736000000000
-    if t < 0 then
-        t = 0
-    end
-    return t / 10000000
+	local t = timestamp - 116444736000000000
+	if t < 0 then
+		t = 0
+	end
+	return t / 10000000
 end
 
---! @brief 判断文件夹是否存在
---! @param path 路径
---! @return 是否存在
+---判断文件夹是否存在
+---@param path string @路径
+---@return boolean
 function plus.DirectoryExists(path)
-    local info = ffi.new("WIN32_FIND_DATAW")
-
-    while string.len(path) > 0 do
-        local last = string.char(string.byte(path, string.len(path)))
-        if last == "\\" or last == "/" or last == "|" then
-            path = string.sub(path, 1, string.len(path) - 1)
-        else
-            break
-        end
-    end
-
-    local handle = kernel32.FindFirstFileW(UTF8ToUTF16LE(path), info)
-    if handle == INVALID_HANDLE_VALUE then
-        local err = GetLastError()
-        if err == 2 or err == 3 then
-            return false
-        else
-            error("FindFirstFileW: "..FormatLastError(err))
-        end
-    end
-
-    local flag = plus.BAND(info.dwFileAttributes, FILE_ATTRIBUTE_DIRECTORY)
-    if flag ~= 0 then
-        return true
-    else
-        return false
-    end
+	local info = ffi.new("WIN32_FIND_DATAW")
+	
+	while string.len(path) > 0 do
+		local last = string.char(string.byte(path, string.len(path)))
+		if last == "\\" or last == "/" or last == "|" then
+			path = string.sub(path, 1, string.len(path) - 1)
+		else
+			break
+		end
+	end
+	
+	local handle = kernel32.FindFirstFileW(UTF8ToUTF16LE(path), info)
+	if handle == INVALID_HANDLE_VALUE then
+		local err = GetLastError()
+		if err == 2 or err == 3 then
+			return false
+		else
+			error("FindFirstFileW: " .. FormatLastError(err))
+		end
+	end
+	
+	local flag = plus.BAND(info.dwFileAttributes, FILE_ATTRIBUTE_DIRECTORY)
+	if flag ~= 0 then
+		return true
+	else
+		return false
+	end
 end
 
---! @brief 创建目录
---! @param path 路径
+---创建目录
+---@param path string @路径
 function plus.CreateDirectory(path)
-    if FALSE == kernel32.CreateDirectoryW(UTF8ToUTF16LE(path), nil) then
-        error("CreateDirectoryW: "..FormatLastError())
-    end
+	if FALSE == kernel32.CreateDirectoryW(UTF8ToUTF16LE(path), nil) then
+		error("CreateDirectoryW: " .. FormatLastError())
+	end
 end
 
---! @brief 枚举目录中的文件或文件夹
---! @param path 目录
---! @return 返回枚举结果
---!
---! 结果表述为：
---!  { { isDirectory = false, name = "abc.txt", lastAccessTime = 0, size = 0 },
---!    { isDirectory = true, name = "test" } }
+---枚举目录中的文件或文件夹
+---结果表述为：
+---{
+---    { isDirectory = false, name = "abc.txt", lastAccessTime = 0, size = 0 },
+---    { isDirectory = true, name = "test" },
+---}
+---@param path string @目录
+---@return table
 function plus.EnumFiles(path)
-    local ret = {}
-    local info = ffi.new("WIN32_FIND_DATAW")
-
-    local handle = kernel32.FindFirstFileW(UTF8ToUTF16LE(path.."\\*"), info)
-    if handle == INVALID_HANDLE_VALUE then
-        error("FindFirstFileW: "..FormatLastError())
-    end
-
-    while true do
-        local filename = UTF16LEToUTF8(info.cFileName)
-        local flag = plus.BAND(info.dwFileAttributes, FILE_ATTRIBUTE_DIRECTORY)
-        local size = info.nFileSizeLow + info.nFileSizeHigh * 0x100000000
-        local lastAccessTime = FileTimeToUnixTime(
-            info.ftLastAccessTime.dwLowDateTime + info.ftLastAccessTime.dwHighDateTime * 0x100000000)
-
-        if not (filename == "." or filename == "..") then
-            if flag ~= 0 then
-                table.insert(ret, { isDirectory = true, name = filename })
-            else
-                table.insert(ret, { isDirectory = false, name = filename, size = size, lastAccessTime = lastAccessTime })
-            end
-        end
-
-        if FALSE == kernel32.FindNextFileW(handle, info) then
-            break
-        end
-    end
-
-    return ret
+	local ret = {}
+	local info = ffi.new("WIN32_FIND_DATAW")
+	
+	local handle = kernel32.FindFirstFileW(UTF8ToUTF16LE(path .. "\\*"), info)
+	if handle == INVALID_HANDLE_VALUE then
+		error("FindFirstFileW: " .. FormatLastError())
+	end
+	
+	while true do
+		local filename = UTF16LEToUTF8(info.cFileName)
+		local flag = plus.BAND(info.dwFileAttributes, FILE_ATTRIBUTE_DIRECTORY)
+		local size = info.nFileSizeLow + info.nFileSizeHigh * 0x100000000
+		local lastAccessTime = FileTimeToUnixTime(
+			info.ftLastAccessTime.dwLowDateTime + info.ftLastAccessTime.dwHighDateTime * 0x100000000)
+		
+		if not (filename == "." or filename == "..") then
+			if flag ~= 0 then
+				table.insert(ret, { isDirectory = true, name = filename })
+			else
+				table.insert(ret, { isDirectory = false, name = filename, size = size, lastAccessTime = lastAccessTime })
+			end
+		end
+		
+		if FALSE == kernel32.FindNextFileW(handle, info) then
+			break
+		end
+	end
+	
+	return ret
 end

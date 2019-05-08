@@ -2,99 +2,114 @@
 ---luastg scoredata
 ---=====================================
 
+local path="score/"
+
 ----------------------------------------
 ---scoredata
 
-local function format_json(str)
-	local ret = ''
-	local indent = '	'
-	local level = 0
-	local in_string = false
-	for i = 1, #str do
-		local s = string.sub(str, i, i)
-		if s == '{' and (not in_string) then
-			level = level + 1
-			ret = ret .. '{\n' .. string.rep(indent, level)
-		elseif s == '}' and (not in_string) then
-			level = level - 1
-			ret = string.format(
-				'%s\n%s}', ret, string.rep(indent, level))
-		elseif s == '"' then
-			in_string = not in_string
-			ret = ret .. '"'
-		elseif s == ':' and (not in_string) then
-			ret = ret .. ': '
-		elseif s == ',' and (not in_string) then
-			ret = ret .. ',\n'
-			ret = ret .. string.rep(indent, level)
-		elseif s == '[' and (not in_string) then
-			level = level + 1
-			ret = ret .. '[\n' .. string.rep(indent, level)
-		elseif s == ']' and (not in_string) then
-			level = level - 1
-			ret = string.format(
-				'%s\n%s]', ret, string.rep(indent, level))
-		else
-			ret = ret .. s
-		end
+local function _get_path()
+	local pn=string.format("%s%s",path,setting.mod)
+	return pn
+end
+
+local function _get_file_name()
+	local fn=string.format("%s%s/%s.dat",path,setting.mod,setting.username)
+	return fn
+end
+
+---将一个表转为scoredata对象（声明）
+local make_scoredata_table
+
+---scoredata对象__newindex元方法
+local function scoredata_mt_newindex(t, k, v)
+	if type(k) ~= 'string' and type(k) ~= 'number' then
+		error('Invalid key type \'' .. type(k) .. '\'')
 	end
-	return ret
-end
-
-function new_scoredata_table()
-	local t={}
-	setmetatable(t,{__newindex=scoredata_mt_newindex,__index=scoredata_mt_index,data={}})
-	return t
-end
-
-function scoredata_mt_newindex(t,k,v)
-	if type(k)~='string' and type(k)~='number' then error('Invalid key type \''..type(k)..'\'') end
-	if type(v)=='function' or type(v)=='userdata' or type(v)=='thread' then error('Invalid value type \''..type(v)..'\'') end
-	if type(v)=='table' then
+	if type(v) == 'function' or type(v) == 'userdata' or type(v) == 'thread' then
+		error('Invalid value type \'' .. type(v) .. '\'')
+	end
+	if type(v) == 'table' then
 		make_scoredata_table(v)
 	end
-	getmetatable(t).data[k]=v
+	getmetatable(t).data[k] = v
 	SaveScoreData()
 end
 
-function scoredata_mt_index(t,k)
+---scoredata对象__index元方法
+local function scoredata_mt_index(t, k)
 	return getmetatable(t).data[k]
 end
 
+---将一个表转为scoredata对象
 function make_scoredata_table(t)
-	if type(t)~='table' then error('t must be a table') end
+	if type(t) ~= 'table' then
+		error('t must be a table')
+	end
 	Serialize(t)
-	setmetatable(t,{__newindex=scoredata_mt_newindex,__index=scoredata_mt_index,data={}})
-	for k,v in pairs(t) do
-		if type(v)=='table' then
+	setmetatable(t, {
+		__newindex = scoredata_mt_newindex,
+		__index = scoredata_mt_index,
+		data = {}
+	})
+	for k, v in pairs(t) do
+		if type(v) == 'table' then
 			make_scoredata_table(v)
 		end
-		getmetatable(t).data[k]=v
-		t[k]=nil
+		getmetatable(t).data[k] = v
+		t[k] = nil
 	end
 end
 
-function DefineDefaultScoreData(t)
-	scoredata=t
+----------------------------------------
+---manager
+
+---创建一个新的scoredata对象
+function new_scoredata_table()
+	local t = {}
+	setmetatable(t, {
+		__newindex = scoredata_mt_newindex,
+		__index = scoredata_mt_index,
+		data = {}
+	})
+	return t
 end
 
+---设置全局的scoredata对象
+function DefineDefaultScoreData(t)
+	scoredata = t
+end
+
+---保存全局scoredata
 function SaveScoreData()
-	local score_data_file=assert(io.open('score\\'..setting.mod..'\\'..setting.username..'.dat','w'))
-	local s=Serialize(scoredata)
-	score_data_file:write(format_json(s))
+	local fname=_get_file_name()
+	local score_data_file = assert(io.open(__UTF8ToANSI(fname), 'w'))
+	local s = Serialize(scoredata)
+	score_data_file:write(utility.format_json(s))
 	score_data_file:close()
 end
 
-function InitScoreData()
-	lfs.mkdir('score\\'..setting.mod)
-	if not FileExist('score\\'..setting.mod..'\\'..setting.username..'.dat') then
-		if scoredata==nil then scoredata={} end
-		if type(scoredata)~='table' then error('scoredata must be a Lua table.') end
-	else
-		local scoredata_file=assert(io.open('score\\'..setting.mod..'\\'..setting.username..'.dat','r'))
-		scoredata=DeSerialize(scoredata_file:read('*a'))
-		scoredata_file:close()
-		scoredata_file=nil
-	end
+---从文件加载数据到scoredata
+function LoadScoreData()
+	local fname=_get_file_name()
+	local scoredata_file = assert(io.open(__UTF8ToANSI(fname), 'r'))
+	scoredata = DeSerialize(scoredata_file:read('*a'))
+	scoredata_file:close()
 	make_scoredata_table(scoredata)
+end
+
+---初始化全局scoredata
+function InitScoreData()
+	lfs.mkdir(_get_path())
+	if FileExist(_get_file_name()) then
+		LoadScoreData()
+	else
+		if scoredata == nil then
+			scoredata = {}
+		else
+			if type(scoredata) ~= 'table' then
+				error('scoredata must be a Lua table.')
+			end
+		end
+		make_scoredata_table(scoredata)
+	end
 end

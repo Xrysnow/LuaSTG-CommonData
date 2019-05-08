@@ -308,3 +308,74 @@ function stage.group.ReturnToTitle(save_rep,finish)
 	end
 	stage.Set('none', self.group.title)
 end
+
+----------------------------------------
+---关卡组与编辑器的接口
+
+function stage.group._StageInit(self,taskf)
+	_init_item(self)
+	difficulty=self.group.difficulty
+	New(mask_fader,'open')
+	jstg.CreatePlayers()
+	self._curtask=task.New(self,taskf)
+	task.New(self,function()
+		while coroutine.status(self._curtask)~='dead' do
+			task.Wait(1)
+		end
+		stage.group.FinishReplay()
+		task.Wait(1)
+		New(mask_fader,'close')
+		task.New(self,function()
+			local _,bgm=EnumRes('bgm')
+			for i=1,30 do
+				for _,v in pairs(bgm) do
+					if GetMusicState(v)=='playing' then
+						SetBGMVolume(v,1-i/30)
+					end
+				end
+				task.Wait(1)
+			end
+		end)
+		task.Wait(30)
+		stage.group.FinishStage()
+	end)
+end
+
+function stage.group._GoToStage(self,index)
+	New(mask_fader,'close')
+	task.New(self,function()
+		local _,bgm=EnumRes('bgm')
+		for i=1,30 do
+			for _,v in pairs(bgm) do
+				if GetMusicState(v)=='playing' then
+					SetBGMVolume(v,1-i/30)
+				end
+			end
+			task.Wait(1)
+		end
+	end)
+	task.Wait(30)
+	stage.group.GoToStage(index)
+end
+
+function stage.group._FinishGroup(self)
+	stage.group.FinishReplay()--
+	task.Wait(1)--
+	New(mask_fader,'close')
+	--_stop_music()
+	--
+	task.New(self,function()
+		local _,bgm=EnumRes('bgm')
+		for i=1,30 do
+			for _,v in pairs(bgm) do
+				if GetMusicState(v)=='playing' then
+					SetBGMVolume(v,1-i/30)
+				end
+			end
+			task.Wait(1)
+		end
+	end)
+	--
+	task.Wait(30)
+	stage.group.FinishGroup()
+end

@@ -245,8 +245,8 @@ local function format_json(str)
 	return ret
 end
 
-local settingfile="Library\\setting"
-local networkfile="Library\\network.txt"
+local settingfile="Library/setting"
+local networkfile="Library/network.txt"
 
 loadNetwork = function()
 	f,msg=io.open(networkfile,'r')

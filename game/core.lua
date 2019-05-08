@@ -9,21 +9,8 @@ lstg=lstg or {}
 ----------------------------------------
 ---各个模块
 
-lstg.DoFile("lib\\Llog.lua")--简单的log系统
-lstg.DoFile("lib\\Ldebug.lua")--简单的debug库
-lstg.DoFile("lib\\Lglobal.lua")--用户全局变量
-lstg.DoFile("lib\\Lmath.lua")--数学常量、数学函数、随机数系统
-lstg.DoFile("plus\\plus.lua")--CHU神的plus库，replay系统、plusClass、NativeAPI
-lstg.DoFile("ex\\ex.lua")--ESC神的ex库，多玩家支持、网络连接、多world、多输入槽位
-lstg.DoFile("lib\\Lobject.lua")--Luastg的Class、object
-lstg.DoFile("lib\\Lresources.lua")--资源的加载函数、资源枚举和判断
-lstg.DoFile("lib\\Lscreen.lua")--world、3d、viewmode的参数设置
-lstg.DoFile("lib\\Linput.lua")--按键状态更新
-lstg.DoFile("lib\\Ltask.lua")--task
-lstg.DoFile("lib\\Lstage.lua")--stage关卡系统
-lstg.DoFile("lib\\Ltext.lua")--文字渲染
-lstg.DoFile("lib\\Lscoredata.lua")--玩家存档
-lstg.DoFile("lib\\Lplugin.lua")--用户插件
+lstg.DoFile("plus/plus.lua")--CHU神的plus库
+lstg.DoFile("lib/Llib.lua")--luastg base library
 
 ----------------------------------------
 ---用户定义的一些函数

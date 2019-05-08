@@ -638,3 +638,193 @@ function task.Basis2MoveToEX(t, mode, ... )
 	self.y=self.y+fy-last_y
 	--待改善：采样方式。希望以后采样能更加精确
 end
+
+----------------------------------------
+---Task
+---未来可能会替代老旧的task实现
+---使用目标对象（table|object）的_tasks和_taskcreate，另外有_TaskTarget,_TaskActive
+
+---@class Task @协同任务
+local Task={}
+
+---协同任务栈
+Task.CurStack={}
+
+---目标对象栈
+Task.TargetStack={}
+
+---最大新建task数
+Task.NewTasksLimit=4096
+
+---默认协同任务函数，会打印self对象和一个计数，用于测试
+Task.DefaultFunction=function(self, ... )
+	local t=0
+	while true do
+		Print(string.format("%s:%d",tostring(self),t))
+		t=t+1
+		Task.Wait(1)
+	end
+end
+
+---新建一个协同任务
+---@param target table|object @储存协同任务的目标对象
+---@param func function @任务函数
+---@vararg any @其他参数
+---@return thread @创建的协同任务
+function Task.New(target,func, ... )
+	--准备私有表
+	if not target._tasks then
+		target._tasks={}
+		target.task=target._tasks
+	end
+	if not target._taskcreate then
+		target._taskcreate={}
+	end
+	--创建协同程序
+	local args={ ... }
+	local rt=coroutine.create(func)
+	table.insert(target._taskcreate,{rt,args})
+	return rt
+end
+
+---“储存协同任务的目标对象”上所有的协同任务全部唤醒一次，同时传入“执行协同任务的目标对象”作为参数
+---@param target table|object @“储存协同任务的目标对象”
+---@param taskTarget table|object @“执行协同任务的目标对象”，默认使用第一个参数
+function Task.Do(target,taskTarget)
+	if target._tasks then
+		if taskTarget==nil then
+			taskTarget=target
+		end
+		
+		table.insert(Task.TargetStack,taskTarget)
+		
+		--对所有协同任务进行唤醒
+		for _,co in ipairs(target._tasks) do
+			table.insert(Task.CurStack,co)
+			local _,errmsg=coroutine.resume(co)
+			if errmsg then
+				error(errmsg)
+			end
+			table.remove(Task.CurStack)
+			if not target._tasks then
+				break
+			end
+		end
+		
+		--对第一次创建的协同任务，进行第一次唤醒并传递参数，需要限制一次性创建的task数量，防止游戏爆炸
+		local _task,_args
+		for _=1,Task.NewTasksLimit do
+			if target._taskcreate and #target._taskcreate>0 then
+				--取出第一个
+				_task=target._taskcreate[1][1]
+				_args=target._taskcreate[1][2]
+				table.remove(target._taskcreate,1)
+				--插入到协同任务队列
+				table.insert(target._tasks,_task)--插入到协同任务队列
+				--执行协同任务
+				table.insert(Task.CurStack,_task)
+				local _,errmsg=coroutine.resume(_task,taskTarget,unpack(_args))
+				if errmsg then
+					error(errmsg)
+				end
+				table.remove(Task.CurStack)
+			else
+				break
+			end
+		end
+		
+		--去除不再需要的task
+		if target._tasks then
+			for s=(#target._tasks),1,-1 do
+				if coroutine.status(target._tasks[s])=="dead" then
+					table.remove(target._tasks,s)
+				end
+			end
+		end
+		
+		table.remove(Task.TargetStack)
+	end
+end
+
+---清理“储存协同任务的目标对象”上所有的协同任务
+---@param target table|object @“储存协同任务的目标对象”
+---@param keepcur boolean @当前执行的协同任务不清理
+function Task.Clear(target,keepcur)
+	if keepcur then
+		--检查当前目标对象上是否有需要保护的协同任务
+		local flag=false
+		local cur=Task.CurStack[#Task.CurStack]
+		for _,co in ipairs(target._tasks) do
+			if co==cur then
+				flag=true
+				break
+			end
+		end
+		--清理task队列
+		if flag then
+			target._taskcreate={}
+			target._tasks[1]=cur
+			for s=2,#target._tasks do
+				target._tasks[s]=nil
+			end
+		else
+			target._taskcreate=nil
+			target._tasks=nil
+			target.task=nil
+		end
+	else
+		target._taskcreate=nil
+		target._tasks=nil
+		target.task=nil
+	end
+end
+
+---等待，只能作用于协同任务
+---@param t number @等待次数，只能为大于等于0的整数
+function Task.Wait(t)
+	t=t or 1
+	t=math.max(0,math.floor(t))
+	for _=1,t do
+		coroutine.yield()
+	end
+end
+
+---等待直到函数的返回值为真，只能作用于协同任务
+---@param target table|object @目标对象
+---@param f function @用于比较的函数，默认为function(target) return target.timer>=0 end
+function Task.Until(target,f)
+	if type(target)=="number" then
+		--兼容旧实现
+		target=math.floor(target)
+		while Task.GetTarget().timer<target do
+			coroutine.yield()
+		end
+	else
+		f=f or function(_target)
+			return _target.timer>=0
+		end
+		while true do
+			if f(target) then
+				break
+			end
+			coroutine.yield()
+		end
+	end
+end
+
+---获取当前执行协同任务的目标对象
+---@return table|object @当前执行协同任务的目标对象
+function Task.GetTarget()
+	local target=Task.TargetStack[#Task.TargetStack]
+	if target._TaskTarget then
+		return target._TaskTarget
+	else
+		return target
+	end
+end
+
+Task.GetSelf=Task.GetTarget
+
+for k,v in pairs(Task) do
+	task[k] = v
+end

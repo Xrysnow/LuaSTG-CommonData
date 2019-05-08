@@ -527,7 +527,7 @@ function simple_menu_mod:frame()
 end
 
 function simple_menu_mod:render()
-	DrawMOD(self.title,self._list,self._pos,self.x,self.y,self.alpha,self.timer,self.pos_changed)
+	DrawMODTTF(self.title,self._list,self._pos,self.x,self.y,self.alpha,self.timer,self.pos_changed)
 end
 
 function DrawMOD(title,text,pos,x,y,alpha,timer,shake,align)
@@ -571,11 +571,26 @@ function DrawMODTTF(title,text,pos,x,y,alpha,timer,shake,align)
 			local k=cos(timer*ui.menu.blink_speed)^2
 			for j=1,3 do color[j]=ui.menu.focused_color1[j]*k+ui.menu.focused_color2[j]*(1-k) end
 			local xos=ui.menu.shake_range*sin(ui.menu.shake_speed*shake)
-			RenderTTF('menuttfs',text[i],x+xos+1,x+xos+1,y-i*ui.menu.sc_pr_line_height+yos-1,y-i*ui.menu.sc_pr_line_height+yos-1,Color(alpha*255,0,0,0),align,'vcenter','noclip')
+			for angle=0,360,45 do
+				local dx,dy=cos(angle),sin(angle)
+				RenderTTF('menuttfs',text[i],
+					x+xos+dx,x+xos+dx,y-i*ui.menu.sc_pr_line_height+yos+dy,y-i*ui.menu.sc_pr_line_height+yos+dy,
+					Color(alpha*255,0,0,0),
+					align,'vcenter','noclip')
+			end
 			RenderTTF('menuttfs',text[i],x+xos,x+xos,y-i*ui.menu.sc_pr_line_height+yos,y-i*ui.menu.sc_pr_line_height+yos,Color(alpha*255,unpack(color)),align,'vcenter','noclip')
-			elseif i<20 and i~=pos then
-			RenderTTF('menuttfs',text[i],x+1,x+1,y-i*ui.menu.sc_pr_line_height+yos-1,y-i*ui.menu.sc_pr_line_height+yos-1,Color(alpha*255,0,0,0),align,'vcenter','noclip')
-			RenderTTF('menuttfs',text[i],x,x,y-i*ui.menu.sc_pr_line_height+yos,y-i*ui.menu.sc_pr_line_height+yos,Color(alpha*255,192,192,192),align,'vcenter','noclip')
+		elseif i<20 and i~=pos then
+			for angle=0,360,45 do
+				local dx,dy=cos(angle),sin(angle)
+				RenderTTF('menuttfs',text[i],
+					x+dx,x+dx,y-i*ui.menu.sc_pr_line_height+yos+dy,y-i*ui.menu.sc_pr_line_height+yos+dy,
+					Color(alpha*255,0,0,0),
+					align,'vcenter','noclip')
+			end
+			RenderTTF('menuttfs',text[i],
+				x,x,y-i*ui.menu.sc_pr_line_height+yos,y-i*ui.menu.sc_pr_line_height+yos,
+				Color(alpha*255,192,192,192),
+				align,'vcenter','noclip')
 		end
 	end
 end
