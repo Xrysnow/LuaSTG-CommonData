@@ -178,6 +178,14 @@ function Math.LogToLinear(v)
 	end
 end
 
+---向量旋转公式
+---@param x number
+---@param y number
+---@param rot number @角度制角度
+function Math.Vec2Rotate(x, y, rot)
+	return x*cos(rot)-y*sin(rot),y*cos(rot)+x*sin(rot)
+end
+
 ----------------------------------------
 ---随机数系统，用于支持replay系统
 

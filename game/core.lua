@@ -18,7 +18,7 @@ lstg.DoFile("lib/Llib.lua")--luastg base library
 ---行为帧动作(和游戏循环的帧更新分开)
 function DoFrame()
 	--设置标题
-	SetTitle(setting.mod..' | FPS='..GetFPS()..' | Number of Objects='..GetnObj())
+	SetTitle(setting.mod..' | FPS='..GetFPS()..' | OBJ='..GetnObj())
 	--获取输入
 	GetInput()
 	--切关处理

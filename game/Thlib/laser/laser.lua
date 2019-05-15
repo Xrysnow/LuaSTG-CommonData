@@ -22,7 +22,9 @@ LoadLaserTexture('laser2',  5,236, 15)
 LoadLaserTexture('laser3',127,  1,128)
 LoadLaserTexture('laser4',  1,254,  1)
 
-LoadImageGroup('laser_node','bullet1',80,0,32,32,1,8)
+LoadTexture('laser_misc','THlib/laser/laser_misc.png',true)
+LoadImageGroup('laser_node','laser_misc',32,0,32,32,1,8)
+LoadImageGroup('laser_head','laser_misc',0,0,32,32,1,8)
 
 laser=Class(object)
 
@@ -33,7 +35,7 @@ function laser:init(index,x,y,rot,l1,l2,l3,w,node,head)
 	self.img2='laser12'..self.index
 	self.img3='laser13'..self.index
 	self.img4='laser_node'..int((self.index+1)/2)
-	self.img5='ball_mid_b'..int((self.index+1)/2)
+	self.img5='laser_head'..int((self.index+1)/2)
 	self.x=x self.y=y self.rot=rot
 	self.prex=x self.prey=y
 	self.l1=l1 self.l2=l2 self.l3=l3 self.w0=w self.w=0

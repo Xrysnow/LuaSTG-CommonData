@@ -499,6 +499,25 @@ function lib.RemovePackage(s)
 	end
 end
 
+---获取路径信息，用于__init__.lua
+---@return string,boolean,string @真实相对根路径、是否位于文件夹内而不是压缩包内、压缩包路径（如果第二个返回值为false）
+function lib.GetDirectoryInfo()
+	local _root_path, _is_dir, _zip_path = "", false, ""--真实根路径，文件夹模式，zip文件路径
+	if type(__args__)=="table" then
+		if __args__[2] then
+			_is_dir = true
+			if type(__args__[1])=="string" then
+				_root_path = __args__[1]
+			end
+		else
+			if type(__args__[1])=="string" then
+				_zip_path = __args__[1]
+			end
+		end
+	end
+	return _root_path, _is_dir, _zip_path
+end
+
 ----------------------------------------
 ---out
 

@@ -268,7 +268,7 @@ function BossSystem:DoTask()
             b.ex.lifes[b.ex.nextcard] = b.hp
         end
         b.ex.finish = 0
-        task.Do(b.ex)
+        task.Do(b.ex, self)
     end
     task.Do(b)
 end

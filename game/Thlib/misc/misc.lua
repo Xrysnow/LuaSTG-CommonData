@@ -204,12 +204,6 @@ function shaker_maker:init(time,size)
 	self.time=time
 	self.size=size
 	self.offset=lstg.worldoffset
-	--[[
-	self.l=lstg.world.l
-	self.r=lstg.world.r
-	self.bb=lstg.world.b
-	self.t=lstg.world.t
-	--]]
 end
 
 function shaker_maker:frame()
@@ -218,12 +212,6 @@ function shaker_maker:frame()
 	local y=self.size*sin(a)
 	self.offset.dx=x
 	self.offset.dy=y
-	--[[
-	lstg.world.l=self.l+x
-	lstg.world.r=self.r+x
-	lstg.world.b=self.bb+y
-	lstg.world.t=self.t+y
-	--]]
 	if self.timer==self.time then
 		Del(self)
 	end
@@ -232,24 +220,12 @@ end
 function shaker_maker:del()
 	self.offset.dx=0
 	self.offset.dy=0
-	--[[
-	lstg.world.l=self.l
-	lstg.world.r=self.r
-	lstg.world.b=self.bb
-	lstg.world.t=self.t
-	--]]
 	lstg.tmpvar.shaker=nil
 end
 
 function shaker_maker:kill()
 	self.offset.dx=0
 	self.offset.dy=0
-	--[[
-	lstg.world.l=self.l
-	lstg.world.r=self.r
-	lstg.world.b=self.bb
-	lstg.world.t=self.t
-	--]]
 	lstg.tmpvar.shaker=nil
 end
 
@@ -423,9 +399,6 @@ end
 ---@param uvhscale number
 ---@param uvvscale number
 function misc.RenderTile(tex,blend,color,x,y,rot,hscale,vscale,u,v,uvrot,uvhscale,uvvscale)
-	if not SetTextureSamplerState then
-		return
-	end
 	--设置采样方式
 	SetTextureSamplerState("address","wrap")
 	--计算顶点坐标

@@ -9,7 +9,7 @@
 ---@class ext @额外游戏循环加强库
 ext={}
 
-local extpath="Thlib\\ext\\"
+local extpath="Thlib/ext/"
 
 DoFile(extpath.."ext_pause_menu.lua")--暂停菜单和暂停菜单资源
 DoFile(extpath.."ext_replay.lua")--CHU爷爷的replay系统以及切关函数重载
@@ -47,18 +47,16 @@ end
 ----------------------------------------
 ---extra user function
 
-function GameStateChange() end
-
 ---设置标题
 function ChangeGameTitle()
 	local title=""
 	if #setting.mod<=0 then
-		title="Luastg Ex Plus 0.81b"
+		title="Luastg Ex Plus 0.90a"
 	else
 		title=setting.mod
 	end
 	title=title..string.format(" | FPS=%.1f",GetFPS())
-	title=title..' | Objects='..GetnObj()
+	title=title..' | OBJ='..GetnObj()
 	if jstg.network.status>0 then
 		title=title..' | '..jstg.NETSTATES[jstg.network.status]
 		if jstg.network.status>4 then
@@ -70,9 +68,9 @@ end
 
 ---切关处理
 function ChangeGameStage()
+	--重置工作
 	jstg.ResetWorlds()--by ETC，重置所有world参数
 	ResetWorldOffset()--by ETC，重置world偏移
-	
 	lstg.ResetLstgtmpvar()--重置lstg.tmpvar
 	ex.Reset()--重置ex全局变量
 	
@@ -142,7 +140,20 @@ function DoFrame()
 	--标题设置
 	ChangeGameTitle()
 	--切关处理
-	if stage.next_stage then ChangeGameStage() end
+	if stage.next_stage then
+		--切关时清空资源和回收对象
+		if stage.current_stage then
+			stage.current_stage:del()
+			task.Clear(stage.current_stage)
+			if stage.preserve_res then
+				stage.preserve_res=nil
+			else
+				RemoveResource("stage")
+			end
+			ResetPool()
+		end
+		ChangeGameStage()
+	end
 	--刷新输入
 	jstg.GetInputEx()
 	--stage和object逻辑
@@ -153,7 +164,9 @@ function DoFrame()
 		stage.current_stage:frame()
 		stage.current_stage.timer=stage.current_stage.timer+1
 	end
+	--obj更新
 	ObjFrame()
+	--出界检测
 	if GetCurrentSuperPause()<=0 or stage.nopause then
 		for i=1,jstg.GetWorldCount() do
 			jstg.SwitchWorld(i)
@@ -161,6 +174,7 @@ function DoFrame()
 			BoundCheck()
 		end
 	end
+	--碰撞检测
 	if GetCurrentSuperPause()<=0 then
 		CollisionCheck(GROUP_PLAYER,GROUP_ENEMY_BULLET)
 		CollisionCheck(GROUP_PLAYER,GROUP_ENEMY)
@@ -174,19 +188,9 @@ function DoFrame()
 		CollisionCheck(GROUP_SPELL,GROUP_ENEMY_BULLET)
 		CollisionCheck(GROUP_SPELL,GROUP_INDES)
 	end
+	--后更新
 	UpdateXY()
 	AfterFrame()
-	--切关时清空资源和回收对象
-	if stage.next_stage and stage.current_stage then
-		stage.current_stage:del()
-		task.Clear(stage.current_stage)
-		if stage.preserve_res then
-			stage.preserve_res=nil
-		else
-			RemoveResource'stage'
-		end
-		ResetPool()
-	end
 end
 
 ---缓速和加速
@@ -230,26 +234,54 @@ function DoFrameEx()
 	end
 end
 
-function BeforeRender() end
-
-function AfterRender()
-	--暂停菜单渲染
-	local state=0
-	ext.pause_menu:render()
+---关卡和OBJ渲染之前
+function BeforeRender()
+	--先清屏一次
+	SetViewport(0,setting.resx,0,setting.resy)
+	RenderClear(Color(255,0,0,0))
 end
 
+---OBJ渲染之后
+function AfterRender()
+	--暂停菜单渲染
+	ext.pause_menu:render()
+	return true
+end
+
+---游戏退出
 function GameExit() end
+
+---渲染碰撞体
+function RenderColliders()
+	for i=1,jstg.GetWorldCount() do
+		jstg.SwitchWorld(i)
+		SetWorldFlag(jstg.worlds[i].world)
+		SetViewMode('world')
+		DrawCollider()
+	end
+	if Collision_Checker then
+		Collision_Checker.render()
+	end
+end
+
+---截图
+function UserScreenShot()
+	if lstg.GetLastKey() == setting.keysys.snapshot and setting.allowsnapshot then
+		Snapshot("snapshot/"..os.date("!%Y-%m-%d-%H-%M-%S", os.time() + setting.timezone * 3600)..".png")--支持时区
+	end
+end
 
 ----------------------------------------
 ---extra game call-back function
 
 function FrameFunc()
-	if jstg then jstg.ProceedConnect() end--刷新网络状态
-	boss_ui.active_count=0--重设boss ui的槽位（多boss支持）
-	if GetLastKey() == setting.keysys.snapshot and setting.allowsnapshot then
-		Snapshot('snapshot\\'..os.date("!%Y-%m-%d-%H-%M-%S", os.time() + setting.timezone * 3600)..'.png')--支持时区
+	UserScreenShot()
+	--刷新网络状态
+	if jstg then
+		jstg.ProceedConnect()
 	end
 	--执行场景逻辑
+	boss_ui.active_count=0--重设boss ui的槽位（多boss支持）
 	if ext.pause_menu:IsKilled() then
 		--处理录像速度与正常更新逻辑
 		DoFrameEx()
@@ -258,8 +290,7 @@ function FrameFunc()
 			ext.pause_menu:FlyIn()
 		end
 	else
-		--暂停菜单部分
-		--仍然需要更新输入
+		--暂停菜单部分，仍然需要更新输入
 		jstg.GetInputEx(true)
 	end
 	--暂停菜单更新
@@ -273,20 +304,16 @@ end
 
 function RenderFunc()
 	BeginScene()
-	SetWorldFlag(1)
+	SetWorldFlag(15)--render all allowed item
 	BeforeRender()
-	if stage.current_stage.timer and stage.current_stage.timer >= 0 and stage.next_stage == nil then
+	if (stage.current_stage.timer and stage.current_stage.timer >= 0) and (stage.next_stage == nil or stage.current_stage.is_menu) then
 		stage.current_stage:render()
 		for i=1,jstg.GetWorldCount() do
 			jstg.SwitchWorld(i)
 			SetWorldFlag(jstg.worlds[i].world)
 			ObjRender()
-			SetViewMode('world')
-			DrawCollider()
 		end
-		if Collision_Checker then
-			Collision_Checker.render()
-		end
+		RenderColliders()
 		if not stage.current_stage.is_menu then RunSystem("on_stage_render") end
 	end
 	AfterRender()
@@ -294,9 +321,7 @@ function RenderFunc()
 end
 
 function FocusLoseFunc()
-	if ext.pause_menu==nil and stage.current_stage and jstg.network.status==0 then
-		if not stage.current_stage.is_menu then
-			ext.pop_pause_menu=true
-		end
+	if ext.pause_menu:IsKilled() and stage.current_stage and jstg.network.status==0 and (not stage.current_stage.is_menu) then
+		ext.pop_pause_menu=true
 	end
 end

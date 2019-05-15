@@ -8,6 +8,7 @@
 
 lstg.package.RequirePackage("Touhou SE")--正作音效包，整数作
 lstg.package.RequirePackage("Touhou SE 2")--正作音效包，拍照作
+lstg.package.RequirePackage("Touhou SE misc")--正作音效包，各种杂项
 
 ----------------------------------------
 ---加载脚本

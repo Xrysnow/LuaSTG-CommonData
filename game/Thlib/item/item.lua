@@ -205,7 +205,7 @@ function item_faith_minor:frame()
 	end
 	if Dist(self,player)<10 then
 		PlaySound('item00',0.3,self.x/200)
-		lstg.var.faith=lstg.var.faith+4
+		--lstg.var.faith=lstg.var.faith+4
 		Del(self)
 	end
 end
@@ -214,28 +214,6 @@ function item_faith_minor:collect()
 	local var=lstg.var
 	var.faith=var.faith+4
 	var.score=var.score+500
-end
-if lstg.ResourceReference and true then--0.81c及以后
-	item_faith_minor.ImageRef=lstg.ResourceReference("item8",2)
-	
-	function item_faith_minor:init(x,y)
-		self.x=x
-		self.y=y
-		lstg.ObjectChangeResource(self,item_faith_minor.ImageRef)
-		self.group=GROUP_ITEM
-		self.layer=LAYER_ITEM
-		if not BoxCheck(self,lstg.world.l,lstg.world.r,lstg.world.b,lstg.world.t) then
-			RawDel(self)
-		end
-		self.vx=ran:Float(-0.15,0.15)
-		self._vy=ran:Float(3.25,3.75)
-		self.flag=1
-		self.attract=0
-		self.bound=false
-		self.is_minor=true
-		self.target=jstg.players[ex._item1%#jstg.players+1]
-		ex._item1=ex._item1+1
-	end
 end
 
 item_point=Class(item)
