@@ -544,7 +544,7 @@ end
 ---移除某种弹型库
 ---@param libraryName string|number @弹型库ID
 function library.removeBulletStyles(libraryName)
-	library.cancelStyles(libraryName)
+	library.cancelBulletStyles(libraryName)
 	library.styles[libraryName]=nil
 end
 
