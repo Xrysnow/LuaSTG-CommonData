@@ -1,7 +1,7 @@
 WalkImageSystem = plus.Class()
 function WalkImageSystem:init(obj, intv, dx_level, dx_rate)
 	self.dx_level = abs(dx_level)
-	self.dx_rate = abs(dx_rate)
+	--self.dx_rate = abs(dx_rate)
 	self.obj = obj
 	self.obj.ani_intv = intv or 8
 	self.obj.lr = self.obj.lr or 1

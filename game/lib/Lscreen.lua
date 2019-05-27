@@ -388,7 +388,9 @@ function SetViewMode(mode)
 		SetViewport(screen.dx,screen.width*screen.scale+screen.dx,screen.dy,screen.height*screen.scale+screen.dy)
 		SetFog()
 		SetImageScale(lstg.globalimagescale)
-	else error('Invalid arguement.') end
+	else
+		error('Invalid arguement.')
+	end
 end
 
 ---更换坐标系，固定缩放
@@ -438,7 +440,9 @@ function SetViewMode2(mode)
 		SetViewport(screen.dx,screen.width*screen.scale+screen.dx,screen.dy,screen.height*screen.scale+screen.dy)
 		SetFog()
 		SetImageScale(lstg.globalimagescale)
-	else error('Invalid arguement.') end
+	else
+		error('Invalid arguement.')
+	end
 end
 
 ----------------------------------------

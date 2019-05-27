@@ -53,8 +53,11 @@ function enemybase:init(hp, nontaijutsu)
 end
 
 function enemy_meta_newindex(t,k,v)
-	if k=='colli' then rawset(t,'_colli',v)
-	else SetAttr(t,k,v) end
+	if k=='colli' then
+		rawset(t,'_colli',v)
+	else
+		SetAttr(t,k,v)
+	end
 end
 
 function enemybase:frame()
